@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+venv/
+.env/
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.pyo
+*.pyd
+
+# auto-generated resume pdf files
+resume_*.pdf
