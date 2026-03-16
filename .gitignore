@@ -12,7 +12,8 @@ Thumbs.db
 # auto-generated resume pdf files
 resume_*.pdf
 
-# sentence transformer model
-models/
 test.py
 worker.py
+
+# sentence transformer model
+models/
