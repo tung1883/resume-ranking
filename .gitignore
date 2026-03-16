@@ -11,3 +11,6 @@ Thumbs.db
 
 # auto-generated resume pdf files
 resume_*.pdf
+
+# sentence transformer model
+models/
