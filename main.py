@@ -1,11 +1,10 @@
 import random
 import argparse
 from resume_parser import parse_resume, parse_job, load_models, parse_resumes
-# from resume_ranking import rank_candidates
 from resume_generate import resume_generator
 import time
 from multiprocessing.connection import Client
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
 import os
 
 skills_list = [
@@ -76,32 +75,11 @@ if __name__ == "__main__":
     load_models()
     parsed_job = parse_job(job)
     
-    # --- ProcessPoolExecutor ---
-    start1 = time.perf_counter()
-
-    with ProcessPoolExecutor(max_workers=8, initializer=load_models) as executor:
-        parsed_resumes = list(executor.map(parse_resume, resumes))
-
-    end1 = time.perf_counter()
-    print("ProcessPool time:", end1 - start1, "seconds")
-
-    # --- ThreadPoolExecutor ---
-    start1 = time.perf_counter()
-
-    load_models()
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        parsed_resumes = list(executor.map(parse_resume, resumes))
-
-    end1 = time.perf_counter()
-    print("ThreadPool time:", end1 - start1, "seconds")
-
-    # --- Sequential ---
-    start1 = time.perf_counter()
-    load_models()
-    parse_resumes = parse_resumes(resumes)    
-
-    end1 = time.perf_counter()
-    print("Sequential time:", end1 - start1, "seconds")
+    if resume_num >= 500:
+        with ProcessPoolExecutor(max_workers=8, initializer=load_models) as executor:
+            parsed_resumes = list(executor.map(parse_resume, resumes))
+    else: 
+        parsed_resumes = parse_resumes(resumes)
     
     end = time.perf_counter()
     print("Parsing time: ", end - start, "s")
@@ -112,10 +90,9 @@ if __name__ == "__main__":
     ranking = conn.recv()
     end = time.perf_counter()
     
-    print(parsed_job)
+    print(job)
     print("Candidate Ranking:")
     for name, skills, score in ranking[:10]:
         print(f"{name:<15} | {', '.join(skills):<30} | {score:.2f}")
-        # print(f"{name:<15} | {score:.2f}")
 
     print("Processing time: ", end - start, "s")
