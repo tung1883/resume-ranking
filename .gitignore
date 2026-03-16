@@ -14,3 +14,5 @@ resume_*.pdf
 
 # sentence transformer model
 models/
+test.py
+worker.py
