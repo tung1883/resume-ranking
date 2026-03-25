@@ -14,7 +14,7 @@ def load_models():
         base_model = spacy.load("en_core_web_sm")
 
     if ner_model is None:
-        ner_model = spacy.load("./skill_ner_model/output/model-best", disable=["tagger", "parser", "lemmatizer"])
+        ner_model = spacy.load(".\\skill_ner_model\\output\\model-best", disable=["tagger", "parser", "lemmatizer"])
 
 def extract_text_from_pdf(pdf_path):
     text = ""
@@ -50,6 +50,8 @@ GENERIC_SKILLS = {
     "cross functional team",
     "project management",
     "efficiency",
+    "engineer insight",
+    "monitoring"
 }
 
 def extract_skills(text, name=None, email=None):

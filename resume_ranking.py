@@ -81,7 +81,6 @@ def compute_candidate_score(candidate, job_skill_vecs):
     # return 0.7 * skill_score + 0.3 * education_score
 
 def rank_candidates(resumes, job):
-
     t0 = time.perf_counter()
 
     job_skill_vecs = model.encode(job["skills"], normalize_embeddings=True)
