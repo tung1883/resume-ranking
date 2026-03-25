@@ -3,9 +3,14 @@ from sentence_transformers import SentenceTransformer
 import numpy as np
 import os
 
-# model = SentenceTransformer("all-MiniLM-L6-v2")
-# model.save("./models/all-MiniLM-L6-v2")
-model = SentenceTransformer("./models/all-MiniLM-L6-v2")
+model_path = "./models/all-MiniLM-L6-v2"
+
+if os.path.exists(model_path):
+    model = SentenceTransformer(model_path)
+else:
+    model = SentenceTransformer("all-MiniLM-L6-v2")
+    model.save(model_path)
+
 level_sentences = {
     1: "basic familiarity with the skill",
     2: "used the skill in work or projects",
