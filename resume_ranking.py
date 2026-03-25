@@ -55,6 +55,14 @@ def compute_skill_score(candidate, job_skill_vecs):
     # sims = cosine_similarity(c_skill_vecs, job_skill_vecs)
     sims = c_skill_vecs @ job_skill_vecs.T
     weighted = sims * (levels[:, None] / TOTAL_SKILL_LEVELS)
+    
+    raw_score = weighted.sum()
+    max_score = (levels.sum() / TOTAL_SKILL_LEVELS) * len(job_skill_vecs)
+    
+    print("COMPUTE SKILL SCORE")
+    print(raw_score, max_score)
+    print("-----")
+    
     return weighted.sum()
 
 # change job["education"] to auto-find the edu. from text
@@ -85,9 +93,86 @@ def compute_candidate_score(candidate, job_skill_vecs):
 
     # return 0.7 * skill_score + 0.3 * education_score
 
+# def rank_candidates(resumes, job):
+#     t0 = time.perf_counter()
+
+#     job_skill_vecs = model.encode(job["skills"], normalize_embeddings=True)
+#     t1 = time.perf_counter()
+#     print("Encode job skills:", t1 - t0)
+
+#     all_contexts = []
+#     all_skills = []
+#     resume_indices = []
+#     resume_names = []
+
+#     for i, r in enumerate(resumes):
+#         resume_names.append(r["name"])
+#         for item in r["skills"]:
+#             all_contexts.append(item["context"])
+#             all_skills.append(item["skill"])
+#             resume_indices.append(i)
+
+#     t2 = time.perf_counter()
+#     print("Collect data:", t2 - t1)
+
+#     context_vecs = model.encode(
+#         all_contexts,
+#         batch_size=256,
+#         normalize_embeddings=True
+#     )
+
+#     t3 = time.perf_counter()
+#     print("Encode contexts:", t3 - t2)
+
+#     sims = context_vecs @ level_matrix.T
+#     best_levels = np.argmax(sims, axis=1)
+
+#     levels = level_keys_arr[best_levels]
+
+#     t4 = time.perf_counter()
+#     print("Infer levels:", t4 - t3)
+
+#     all_skill_vecs = model.encode(
+#         all_skills,
+#         batch_size=256,
+#         normalize_embeddings=True
+#     )
+
+#     t5 = time.perf_counter()
+#     print("Encode skills:", t5 - t4)
+
+#     sims = all_skill_vecs @ job_skill_vecs.T
+
+#     weighted_scores = sims * (levels[:, None] / TOTAL_SKILL_LEVELS)
+#     skill_scores = weighted_scores.sum(axis=1)
+
+#     t6 = time.perf_counter()
+#     print("Compute similarity:", t6 - t5)
+
+#     resume_scores = np.zeros(len(resumes))
+#     np.add.at(resume_scores, resume_indices, skill_scores)
+
+#     t7 = time.perf_counter()
+#     print("Aggregate scores:", t7 - t6)
+
+#     ranked = []
+#     for i, r in enumerate(resumes):
+#         skills = [s["skill"] for s in r["skills"]]
+#         ranked.append((resume_names[i], skills,
+#                       resume_scores[i], r.get("account_email")))
+
+#     ranked.sort(key=lambda x: x[2], reverse=True)
+
+#     t8 = time.perf_counter()
+    
+#     print("Sorting:", t8 - t7)
+
+#     print("Total:", t8 - t0)
+
+#     return ranked
+
 def rank_candidates(resumes, job):
     t0 = time.perf_counter()
-
     job_skill_vecs = model.encode(job["skills"], normalize_embeddings=True)
     t1 = time.perf_counter()
     print("Encode job skills:", t1 - t0)
@@ -96,14 +181,13 @@ def rank_candidates(resumes, job):
     all_skills = []
     resume_indices = []
     resume_names = []
-
     for i, r in enumerate(resumes):
         resume_names.append(r["name"])
         for item in r["skills"]:
             all_contexts.append(item["context"])
             all_skills.append(item["skill"])
             resume_indices.append(i)
-
+    
     t2 = time.perf_counter()
     print("Collect data:", t2 - t1)
 
@@ -112,15 +196,14 @@ def rank_candidates(resumes, job):
         batch_size=256,
         normalize_embeddings=True
     )
-
+    
     t3 = time.perf_counter()
     print("Encode contexts:", t3 - t2)
 
     sims = context_vecs @ level_matrix.T
     best_levels = np.argmax(sims, axis=1)
-
     levels = level_keys_arr[best_levels]
-
+    
     t4 = time.perf_counter()
     print("Infer levels:", t4 - t3)
 
@@ -129,21 +212,31 @@ def rank_candidates(resumes, job):
         batch_size=256,
         normalize_embeddings=True
     )
-
+    
     t5 = time.perf_counter()
     print("Encode skills:", t5 - t4)
 
     sims = all_skill_vecs @ job_skill_vecs.T
-
     weighted_scores = sims * (levels[:, None] / TOTAL_SKILL_LEVELS)
     skill_scores = weighted_scores.sum(axis=1)
-
+    
     t6 = time.perf_counter()
     print("Compute similarity:", t6 - t5)
 
     resume_scores = np.zeros(len(resumes))
     np.add.at(resume_scores, resume_indices, skill_scores)
 
+    # normalize against max possible score
+    max_skill_scores = (levels / TOTAL_SKILL_LEVELS) * len(job["skills"])
+    resume_max_scores = np.zeros(len(resumes))
+    np.add.at(resume_max_scores, resume_indices, max_skill_scores)
+    resume_scores = np.divide(
+        resume_scores,
+        resume_max_scores / 3,
+        out=np.zeros_like(resume_scores),   
+        where=resume_max_scores > 0
+    )
+    
     t7 = time.perf_counter()
     print("Aggregate scores:", t7 - t6)
 
@@ -152,22 +245,9 @@ def rank_candidates(resumes, job):
         skills = [s["skill"] for s in r["skills"]]
         ranked.append((resume_names[i], skills,
                       resume_scores[i], r.get("account_email")))
-
-    # ranked.sort(key=lambda x: x[2], reverse=True)
-
-    # t8 = time.perf_counter()
-    
     ranked.sort(key=lambda x: x[2], reverse=True)
-
-    # Normalize scores to 0-1
-    max_score = ranked[0][2] if ranked else 1.0
-    if max_score > 0:
-        ranked = [(name, skills, float(score / max_score), email)
-                  for name, skills, score, email in ranked]
-
+    
     t8 = time.perf_counter()
     print("Sorting:", t8 - t7)
-
     print("Total:", t8 - t0)
-
     return ranked
