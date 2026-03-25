@@ -24,7 +24,7 @@ level_embeddings = {
 level_keys = list(level_embeddings.keys())
 level_keys_arr = np.array(level_keys)
 level_matrix = np.array(list(level_embeddings.values()))
-    
+
 TOTAL_SKILL_LEVELS = 4
 
 def infer_skill_levels(skills):
@@ -73,7 +73,7 @@ def compute_education_score(candidate, job):
 
     # similarity = cosine_similarity([cand_vec], [job_vec])[0][0]
     similarity = cand_vec @ job_vec
-    
+
     return similarity
 
 def compute_candidate_score(candidate, job_skill_vecs):
@@ -150,9 +150,20 @@ def rank_candidates(resumes, job):
     ranked = []
     for i, r in enumerate(resumes):
         skills = [s["skill"] for s in r["skills"]]
-        ranked.append((resume_names[i], skills, resume_scores[i]))
+        ranked.append((resume_names[i], skills,
+                      resume_scores[i], r.get("account_email")))
 
+    # ranked.sort(key=lambda x: x[2], reverse=True)
+
+    # t8 = time.perf_counter()
+    
     ranked.sort(key=lambda x: x[2], reverse=True)
+
+    # Normalize scores to 0-1
+    max_score = ranked[0][2] if ranked else 1.0
+    if max_score > 0:
+        ranked = [(name, skills, float(score / max_score), email)
+                  for name, skills, score, email in ranked]
 
     t8 = time.perf_counter()
     print("Sorting:", t8 - t7)
